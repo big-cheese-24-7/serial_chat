@@ -31,7 +31,8 @@
     --ring: 142.1 76.2% 36.3%;
     --radius: 0.3rem;
   }
-  .dark {
+  .dark,
+  :root[class~="dark"] {
     --background: 20 14.3% 4.1%;
     --foreground: 0 0% 95%;
     --card: 24 9.8% 10%;
