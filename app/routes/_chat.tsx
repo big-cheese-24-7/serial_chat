@@ -32,7 +32,7 @@ function UserSheet({ children }: PropsWithChildren) {
                         <div className="px-2 py-3 flex items-center gap-3">
                             <Avatar>
                                 <AvatarImage src="https://github.com/shadcn.png" />
-                                <AvatarFallback>CN</AvatarFallback>
+                                <AvatarFallback className="bg-primary text-primary-foreground">CN</AvatarFallback>
                             </Avatar>
 
                             <div>
@@ -96,7 +96,7 @@ export default function Layout() {
                     <section className="-ml-2">
                         <Link to="/" className="flex items-center gap-3 styled-focus rounded-md py-1.5 px-2">
                             <img src="/serial-chat-logo.svg" alt="Serial chat logo" className="h-7 w-7 lg:h-9 lg:w-9" />
-                            <span className="text-lg lg:text-xl font-bold">Serial Chat</span>
+                            <span className="text-lg lg:text-xl font-extrabold">Serial Chat</span>
                         </Link>
                     </section>
 
@@ -132,7 +132,7 @@ export default function Layout() {
                                 <Button variant={"ghost"} size={"icon"} className="rounded-full">
                                     <Avatar className="h-full w-full">
                                         <AvatarImage src="https://github.com/shadcn.png" />
-                                        <AvatarFallback>CN</AvatarFallback>
+                                        <AvatarFallback className="bg-primary text-primary-foreground">CN</AvatarFallback>
                                     </Avatar>
                                 </Button>
                             </UserSheet>

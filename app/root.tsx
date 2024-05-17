@@ -1,5 +1,7 @@
-import { ThemeProvider } from "./components/theme-provider";
-import "./tailwind.css"
+import "~/tailwind.css"
+import '@fontsource-variable/mulish';
+
+import { ThemeProvider } from "~/components/theme-provider";
 
 import {
   Links,
@@ -16,6 +18,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <meta charSet="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <link rel="icon" href="/serial-chat-logo.svg" />
+        <style>
+
+        </style>
         <Meta />
         <Links />
       </head>
