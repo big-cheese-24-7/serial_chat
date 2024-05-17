@@ -3,8 +3,8 @@ import { Button } from "~/components/ui/button";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Remix SPA" },
-    { name: "description", content: "Welcome to Remix (SPA Mode)!" },
+    { title: "Chat" },
+    { name: "description", content: "Welcome to serial chat" },
   ];
 };
 
