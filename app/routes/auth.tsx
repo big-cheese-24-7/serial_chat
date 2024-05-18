@@ -1,7 +1,12 @@
-import { Link, MetaFunction } from "@remix-run/react";
+import { ClientActionFunctionArgs, Form, Link, MetaFunction, redirect } from "@remix-run/react";
+
+import { pb } from "~/lib/pocketbase.client";
+import { ClientResponseError } from "pocketbase";
 
 import { useTheme } from "~/components/theme-provider";
 import { cn } from "~/lib/utils";
+import { toast } from "sonner";
+
 import { ChromeIcon, FacebookIcon, GithubIcon, MoonIcon, SunIcon } from "lucide-react";
 import { Button, buttonVariants } from "~/components/ui/button";
 import {
@@ -19,15 +24,30 @@ export const meta: MetaFunction = () => {
         { name: "description", content: "Authenticate to continue" },
     ];
 };
-export default function RouteComponent() {
-    const { setTheme, theme } = useTheme()
 
-    function toggleTheme() {
-        if (theme === "dark") {
-            return setTheme("light")
+export const clientAction = async ({
+    request,
+}: ClientActionFunctionArgs) => {
+
+    const provider = (await request.formData()).get("provider") as string
+
+    try {
+        await pb.collection('members').authWithOAuth2({ provider })
+        toast.success("Authentication successfull!")
+        return redirect("/")
+    } catch (error) {
+        if (error instanceof ClientResponseError) {
+            return toast.error(error.message)
         }
-        return setTheme("dark")
+        return toast.error("Authentication failed! try again")
     }
+};
+
+
+export default function RouteComponent() {
+
+    const { theme, toggleTheme } = useTheme()
+
     return (
         <div className="flex h-screen flex-col">
             <header className="border-b sticky top-0 left-0 right-0 z-40 bg-background shadow-sm">
@@ -77,15 +97,17 @@ export default function RouteComponent() {
                             <CardTitle className="text-center text-xl font-bold">Authenticate</CardTitle>
                             <CardDescription className="text-center text-sm text-muted-foreground">Choose your provider to continue with</CardDescription>
                         </CardHeader>
-                        <CardContent className="space-y-2">
-                            <Button size={"lg"} className="w-full gap-3 bg-gray-100 text-gray-900 hover:bg-gray-200">
-                                <ChromeIcon className="h-5 w-5" />
-                                <span>Continue with google</span>
-                            </Button>
-                            <Button size={"lg"} className="w-full gap-3 bg-gray-900 text-white hover:bg-gray-800">
-                                <GithubIcon className="h-5 w-5" />
-                                <span>Continue with github</span>
-                            </Button>
+                        <CardContent>
+                            <Form className="space-y-2" method="post">
+                                <Button value="google" name="provider" size={"lg"} className="w-full gap-3 bg-gray-100 text-gray-900 hover:bg-gray-200">
+                                    <ChromeIcon className="h-5 w-5" />
+                                    <span>Continue with google</span>
+                                </Button>
+                                <Button value="github" name="provider" size={"lg"} className="w-full gap-3 bg-gray-900 text-white hover:bg-gray-800">
+                                    <GithubIcon className="h-5 w-5" />
+                                    <span>Continue with github</span>
+                                </Button>
+                            </Form>
                         </CardContent>
                     </Card>
                 </div>
