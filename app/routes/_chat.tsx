@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation } from "@remix-run/react"
 import { PropsWithChildren, useEffect, useState } from "react";
 
-import { cn } from "~/lib/utils";
+import { cn, getInitialLetter } from "~/lib/utils";
 import { FacebookIcon, LogOutIcon, MessageSquareCodeIcon, MessagesSquareIcon, MoonIcon, SunIcon, Users2Icon } from "lucide-react";
 import { Button, buttonVariants } from "~/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
@@ -11,10 +11,30 @@ import {
     SheetTrigger,
 } from "~/components/ui/sheet"
 import { useTheme } from "~/components/theme-provider";
+import { getCurrentUser, logout } from "~/lib/pocketbase.client";
+
+type UserAvatarProps = {
+    avatar_url: string
+    username: string
+}
+
+function UserAvatar({ avatar_url, username }: UserAvatarProps) {
+
+    return (
+        <Avatar className="h-10 w-10">
+            <AvatarImage src={avatar_url} alt={`${username} profile picture`} />
+            <AvatarFallback className="bg-primary text-lg text-primary-foreground">
+                {getInitialLetter(username)}
+            </AvatarFallback>
+        </Avatar>
+    )
+}
 
 function UserSheet({ children }: PropsWithChildren) {
-    const [open, setOpen] = useState(false)
 
+    const currentUser = getCurrentUser()!
+
+    const [open, setOpen] = useState(false)
     const { pathname } = useLocation()
 
     useEffect(() => {
@@ -26,18 +46,21 @@ function UserSheet({ children }: PropsWithChildren) {
             <SheetTrigger asChild>
                 {children}
             </SheetTrigger>
-            <SheetContent className="max-w-sm">
+            <SheetContent className="max-w-sm ">
                 <ul className="space-y-1">
                     <li>
                         <div className="px-2 py-3 flex items-center gap-3">
-                            <Avatar>
-                                <AvatarImage src="https://github.com/shadcn.png" />
-                                <AvatarFallback className="bg-primary text-primary-foreground">CN</AvatarFallback>
-                            </Avatar>
-
                             <div>
-                                <p className="font-semibold text-sm">Bombardo</p>
-                                <p className="text-xs text-muted-foreground">poupou142@gogo.cov</p>
+                                <UserAvatar avatar_url={currentUser.avatar_url} username={currentUser.username} />
+                            </div>
+
+                            <div className="truncate">
+                                <p className="font-semibold text-sm truncate">
+                                    {currentUser.username}
+                                </p>
+                                <p className="text-xs text-muted-foreground truncate">
+                                    {currentUser.email}
+                                </p>
                             </div>
                         </div>
                     </li>
@@ -67,7 +90,7 @@ function UserSheet({ children }: PropsWithChildren) {
                     </li>
 
                     <li>
-                        <Button variant={"ghost"} size={"sm"} className="w-full justify-start gap-3 text-destructive">
+                        <Button onClick={logout} variant={"ghost"} size={"sm"} className="w-full justify-start gap-3 text-destructive">
                             <LogOutIcon className="h-4 w-4" />
                             <span>Logout</span>
                         </Button>
@@ -80,19 +103,15 @@ function UserSheet({ children }: PropsWithChildren) {
 
 
 export default function Layout() {
-    const { setTheme, theme } = useTheme()
 
-    function toggleTheme() {
-        if (theme === "dark") {
-            return setTheme("light")
-        }
-        return setTheme("dark")
-    }
+    const currentUser = getCurrentUser()!
+
+    const { theme, toggleTheme } = useTheme()
 
     return (
         <div className="relative">
             <header className="border-b sticky top-0 left-0 right-0 z-40 bg-background shadow-sm">
-                <div className="h-16 flex items-center gap-8 px-4 lg:px-8 justify-between">
+                <div className="h-16 flex items-center gap-8 px-4 lg:px-8 max-w-7xl mx-auto justify-between">
                     <section className="-ml-2">
                         <Link to="/" className="flex items-center gap-3 styled-focus rounded-md py-1.5 px-2">
                             <img src="/serial-chat-logo.svg" alt="Serial chat logo" className="h-7 w-7 lg:h-9 lg:w-9" />
@@ -130,10 +149,7 @@ export default function Layout() {
                         <li className="h-10">
                             <UserSheet>
                                 <Button variant={"ghost"} size={"icon"} className="rounded-full">
-                                    <Avatar className="h-full w-full">
-                                        <AvatarImage src="https://github.com/shadcn.png" />
-                                        <AvatarFallback className="bg-primary text-primary-foreground">CN</AvatarFallback>
-                                    </Avatar>
+                                    <UserAvatar avatar_url={currentUser.avatar_url} username={currentUser.username} />
                                 </Button>
                             </UserSheet>
                         </li>
@@ -142,7 +158,7 @@ export default function Layout() {
             </header>
 
             <main>
-                <div className="px-4 lg:px-8">
+                <div className="px-4 lg:px-8 max-w-7xl mx-auto">
                     <Outlet />
                 </div>
             </main>

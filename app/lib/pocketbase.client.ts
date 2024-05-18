@@ -9,3 +9,8 @@ export function isLoggedIn() {
 export function getCurrentUser() {
     return pb.authStore.model
 }
+
+export function logout() {
+    pb.authStore.clear()
+    return window.location.reload()
+}
