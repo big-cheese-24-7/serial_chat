@@ -2,6 +2,8 @@ import { ClientActionFunctionArgs, Form, Link, MetaFunction, redirect } from "@r
 
 import { pb } from "~/lib/pocketbase.client";
 import { ClientResponseError } from "pocketbase";
+import { mustBeNotLoggedIn } from "~/lib/auth-guards";
+
 
 import { useTheme } from "~/components/theme-provider";
 import { cn } from "~/lib/utils";
@@ -24,6 +26,9 @@ export const meta: MetaFunction = () => {
         { name: "description", content: "Authenticate to continue" },
     ];
 };
+
+export const clientLoader = mustBeNotLoggedIn
+
 
 export const clientAction = async ({
     request,
