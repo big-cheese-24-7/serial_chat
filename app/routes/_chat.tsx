@@ -111,7 +111,7 @@ export default function Layout() {
     return (
         <div className="relative">
             <header className="lg:border-b sticky top-0 left-0 right-0 z-40 bg-background shadow-sm">
-                <div className="h-16 flex items-center gap-8 px-4 lg:px-8 max-w-7xl mx-auto justify-between">
+                <div className="h-16 flex items-center gap-4 lg:gap-8 px-4 lg:px-8 max-w-7xl mx-auto justify-between">
                     <section className="-ml-2">
                         <Link to="/" className="flex items-center gap-3 styled-focus rounded-md py-1.5 px-2">
                             <img src="/serial-chat-logo.svg" alt="Serial chat logo" className="h-7 w-7 lg:h-9 lg:w-9" />
