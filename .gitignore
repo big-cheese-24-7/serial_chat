@@ -4,4 +4,6 @@ node_modules
 /build
 /public/build
 .env
-./server/pb_data
+/server/pb_data
+/server/pb_public
+info.txt
