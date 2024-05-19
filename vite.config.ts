@@ -6,6 +6,7 @@ export default defineConfig({
   plugins: [
     remix({
       ssr: false,
+      buildDirectory: "./server/pb_public",
     }),
     tsconfigPaths(),
   ],
