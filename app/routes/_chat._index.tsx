@@ -1,12 +1,26 @@
-import { useLoaderData, redirect, defer, Await } from "@remix-run/react";
+import {
+    useLoaderData,
+    redirect,
+    defer,
+    Await,
+    ClientActionFunctionArgs,
+    Form,
+    useActionData,
+    useRevalidator
+} from "@remix-run/react";
 import { type MetaFunction } from "@remix-run/node";
 
 import { getCurrentUser, isLoggedIn, pb } from "~/lib/pocketbase.client";
+
+import { Suspense, useEffect, useRef, useState } from "react";
+
 import { SendHorizonalIcon, TriangleAlertIcon } from "lucide-react";
-import { Suspense, useEffect, useRef } from "react";
 import { Textarea } from "~/components/ui/textarea";
 import { Button } from "~/components/ui/button";
-import { RecordModel } from "pocketbase";
+import { LoadingChat } from "~/components/loading/chat-skeleton";
+import { MessageBox } from "~/components/message-box";
+import { LoadingMetaData } from "~/components/loading/meta-skeleton";
+
 
 export const meta: MetaFunction = () => {
     return [
@@ -25,66 +39,90 @@ export async function clientLoader() {
         expand: "sender"
     });
 
+    const metaData = pb.send<{
+        members_count: number,
+        messages_count: number,
+    }>("/api/meta-data", {})
+
     return defer({
-        messages
+        messages,
+        metaData
     })
 }
 
-type MessageBoxProps = {
-    messageData: RecordModel
-    isMine: boolean
-}
-import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar"
-import { getInitialLetter } from "~/lib/utils";
+export const clientAction = async ({
+    request,
+}: ClientActionFunctionArgs) => {
 
-function MessageBox({ messageData, isMine }: MessageBoxProps) {
+    const messageText = (await request.formData()).get("message-text") as string
+    const currentUser = getCurrentUser()!
 
-    if (isMine) {
-        return (
-            <article className="flex items-end gap-2 justify-end mb-4 pl-10">
-                <section className="!break-words  !text-pretty px-4 py-3 rounded-md bg-primary text-primary-foreground max-w-[calc(100vw_-_118px)] sm:max-w-xs break-before-all">
-                    <div className=" inline-block text-sm !text-pretty !break-words w-full">
-                        {messageData.text}
-                    </div>
-                </section>
-                <Avatar title={messageData.expand?.sender.username} className="h-8 w-8" >
-                    <AvatarImage src={messageData.expand?.sender.avatar_url} alt={`${messageData.expand?.sender.username} profile picture`} />
-                    <AvatarFallback className="bg-primary text-lg text-primary-foreground">
-                        {getInitialLetter(messageData.expand?.sender.username)}
-                    </AvatarFallback>
-                </Avatar>
-            </article>
-        )
+    try {
+        const data = {
+            "text": messageText,
+            "sender": currentUser.id
+        };
+
+        await pb.collection('messages').create(data);
+
+        return {
+            sent: true
+        }
+
+    } catch {
+        return {
+            sent: false
+        }
     }
-
-
-    return (
-        <article className="flex items-end gap-2 mb-4 break-words pr-10">
-            <Avatar title={messageData.expand?.sender.username} className="h-8 w-8">
-                <AvatarImage src={messageData.expand?.sender.avatar_url} alt={`${messageData.expand?.sender.username} profile picture`} />
-                <AvatarFallback className="bg-primary text-lg text-primary-foreground">
-                    {getInitialLetter(messageData.expand?.sender.username)}
-                </AvatarFallback>
-            </Avatar>
-
-            <section className="!break-words !text-pretty px-4 py-3 rounded-md bg-secondary max-w-[calc(100vw_-_118px)] sm:max-w-xs break-before-all">
-                <div className=" inline-block text-sm !text-pretty !break-words w-full">
-                    {messageData.text}
-                </div>
-            </section>
-        </article>
-    )
-}
-
-
+};
 
 export default function RouteComponent() {
 
-    const { messages } = useLoaderData<typeof clientLoader>()
+    const { messages, metaData } = useLoaderData<typeof clientLoader>()
+    const { revalidate: revalidateMessages } = useRevalidator()
+
+    useEffect(() => {
+        pb.collection('messages').subscribe('*', function (e) {
+            revalidateMessages()
+            return scrollToLastMessage()
+        });
+
+        return () => {
+            pb.collection('messages').unsubscribe('*')
+        }
+    }, [])
+
+
+    const formResponse = useActionData<typeof clientAction>()
+
+    useEffect(() => {
+        if (formResponse?.sent) {
+            setMessage(() => "")
+        }
+    }, [formResponse])
+
+    const [message, setMessage] = useState("")
+    const [sendBtnDisabled, setSendBtnDisabled] = useState(false)
+
+    function handleMessageChange(newMessage: string) {
+        setMessage(() => newMessage)
+    }
+
+    useEffect(() => {
+        if (message.trim() === "") {
+            return setSendBtnDisabled(true)
+        }
+        return setSendBtnDisabled(false)
+    }, [message])
+
 
     const currentUser = getCurrentUser()!
 
     const scrollAnchorRef = useRef<HTMLLIElement>(null)
+
+    function scrollToLastMessage() {
+        scrollAnchorRef.current?.scrollIntoView()
+    }
 
     useEffect(() => {
         scrollAnchorRef.current?.scrollIntoView()
@@ -92,27 +130,33 @@ export default function RouteComponent() {
 
 
     return (
-        <div className="sm:max-w-md sm:mx-auto  h-[calc(100vh_-_4rem_-_1px)] flex flex-col lg:py-8">
-            <header>
-                <div className="flex items-center gap-4 border justify-between px-4 h-14 dark:bg-secondary">
+        <div className="sm:max-w-md sm:mx-auto border h-[calc(100vh_-_4rem_-_1px)] lg:h-[calc(100vh_-_8rem_-_1px)] flex flex-col lg:mt-8">
+            <header className="border-b">
+                <div className="flex items-center gap-4 justify-between px-4 h-14">
                     <h1 className="font-bold">Chat</h1>
-                    <ul className="flex items-center gap-4">
-                        <li>
+                    <Suspense fallback={<LoadingMetaData />}>
+                        <Await resolve={metaData}>
+                            {({ members_count, messages_count }) => (
+                                <ul className="flex items-center gap-4">
+                                    <li>
 
-                            <p className="text-xs text-muted-foreground">
-                                23 messages
-                            </p>
-                        </li>
-                        <li>
-                            <p className="text-xs text-muted-foreground">
-                                56 memebers
-                            </p>
-                        </li>
-                    </ul>
+                                        <p className="text-xs text-muted-foreground">
+                                            {messages_count} messages
+                                        </p>
+                                    </li>
+                                    <li>
+                                        <p className="text-xs text-muted-foreground">
+                                            {members_count} memebers
+                                        </p>
+                                    </li>
+                                </ul>
+                            )}
+                        </Await>
+                    </Suspense>
                 </div>
             </header>
             <section className="flex-1 overflow-y-auto overflow-x-clip">
-                <div className="border-x px-4 h-full">
+                <div className="px-4 min-h-full">
                     <Suspense fallback={<LoadingChat />}>
                         <Await resolve={messages}>
                             {(messagesList) => (
@@ -125,7 +169,7 @@ export default function RouteComponent() {
                                             />
                                         </li>
                                     ))}
-                                    <li ref={scrollAnchorRef}></li>
+                                    <li ref={scrollAnchorRef} onLoad={scrollToLastMessage} className="h-8"></li>
                                 </ul>
                             )}
                         </Await>
@@ -133,44 +177,25 @@ export default function RouteComponent() {
 
                 </div>
             </section>
-            <footer>
-                <form className="border h-12 flex items-center gap-1">
-                    <Textarea placeholder="Type your message..." name="message-text" className="resize-none min-h-full h-full border-none flex-1" />
-                    <Button size="icon" title="Send message" className="h-full">
+            <footer className="border-t">
+                <Form method="post" className="h-12 flex items-center gap-1">
+                    <div className="h-full p-1 flex-1">
+                        <Textarea
+                            value={message}
+                            onChange={(evt) => handleMessageChange(evt.target.value)}
+                            name="message-text"
+                            placeholder="Type your message..."
+                            className="w-full resize-none min-h-full h-full border-none"
+                        />
+                    </div>
+                    <Button disabled={sendBtnDisabled} size="icon" title="Send message" className="h-full w-12">
                         <SendHorizonalIcon className="h-5 w-5" />
                         <span className="sr-only">Send message</span>
                     </Button>
-                </form>
+                </Form>
             </footer>
         </div>
     );
-}
-
-function LoadingChat() {
-    return (
-        <div className="h-[calc(100vh_-_4rem_-_1px)] flex items-center flex-col justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 150" className="h-24 w-24 lg:h-40 lg:w-40"
-            ><path
-                fill="none"
-                stroke="#FF156D"
-                strokeWidth="15"
-                strokeLinecap="round"
-                strokeDasharray="300 385"
-                strokeDashoffset="0"
-                d="M275 75c0 31-27 50-50 50-58 0-92-100-150-100-28 0-50 22-50 50s23 50 50 50c58 0 92-100 150-100 24 0 50 19 50 50Z"
-                className="stroke-primary"
-            ><animate
-                attributeName="stroke-dashoffset"
-                calcMode="spline"
-                dur="2"
-                values="685;-685"
-                keySplines="0 0 1 1"
-                repeatCount="indefinite"
-            ></animate>
-                </path>
-            </svg>
-        </div>
-    )
 }
 
 export function ErrorBoundary() {
