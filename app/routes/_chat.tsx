@@ -101,7 +101,6 @@ function UserSheet({ children }: PropsWithChildren) {
     )
 }
 
-
 export default function Layout() {
 
     const currentUser = getCurrentUser()!
