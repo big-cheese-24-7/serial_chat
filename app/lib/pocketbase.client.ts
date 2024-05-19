@@ -1,6 +1,10 @@
 import Pocketbase from "pocketbase"
 
-export const pb = new Pocketbase("http://127.0.0.1:8090")
+const url = process.env.NODE_ENV === "development" ?
+    "http://127.0.0.1:8090" :
+    "https://serial-chat.pockethost.io/"
+
+export const pb = new Pocketbase(url)
 
 export function isLoggedIn() {
     return pb.authStore.isValid
